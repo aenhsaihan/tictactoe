@@ -19,19 +19,11 @@
       <div class="board-card">
         <div
           class="board"
+          id="game-board"
           data-role="board"
           role="grid"
           aria-label="Game board"
         >
-          <div class="cell" role="gridcell" data-cell="0"></div>
-          <div class="cell" role="gridcell" data-cell="1"></div>
-          <div class="cell" role="gridcell" data-cell="2"></div>
-          <div class="cell" role="gridcell" data-cell="3"></div>
-          <div class="cell" role="gridcell" data-cell="4"></div>
-          <div class="cell" role="gridcell" data-cell="5"></div>
-          <div class="cell" role="gridcell" data-cell="6"></div>
-          <div class="cell" role="gridcell" data-cell="7"></div>
-          <div class="cell" role="gridcell" data-cell="8"></div>
         </div>
 
         <div class="game-status">
@@ -53,11 +45,25 @@
       <aside class="scoreboard" aria-label="Game information">
         <div class="stat">
           <span class="label">Score</span>
-          <span class="value" id="score">0</span>
+          <span
+            class="value"
+            id="score"
+            role="status"
+            aria-live="polite"
+          >
+            0
+          </span>
         </div>
         <div class="stat">
           <span class="label">Timer</span>
-          <span class="value" id="timer">00:00</span>
+          <span
+            class="value"
+            id="timer"
+            role="timer"
+            aria-live="off"
+          >
+            00:00
+          </span>
         </div>
         <div class="stat stat--current">
           <span class="label">Current Player</span>
@@ -91,6 +97,9 @@
     </div>
   </footer>
 
+  <script src="src/GameModel.js"></script>
+  <script src="src/GameView.js"></script>
+  <script src="src/GameController.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

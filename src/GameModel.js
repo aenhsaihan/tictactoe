@@ -143,4 +143,10 @@ class GameModel {
   }
 }
 
-module.exports = GameModel;
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = GameModel;
+}
+
+if (typeof window !== "undefined") {
+  window.GameModel = GameModel;
+}

@@ -1,6 +1,8 @@
 class GameView {
   #cellClickCallback;
   #boundClickHandler;
+  #boundKeyDownHandler;
+  #activeCellCoordinates;
 
   constructor(options = {}) {
     if (typeof document === "undefined" || !document) {
@@ -46,12 +48,15 @@ class GameView {
 
     this.#cellClickCallback = null;
     this.#boundClickHandler = null;
+    this.#boundKeyDownHandler = this.#handleKeyDown.bind(this);
+    this.#activeCellCoordinates = { row: 0, col: 0 };
 
     this.#handleMouseEnter = this.#handleMouseEnter.bind(this);
     this.#handleMouseLeave = this.#handleMouseLeave.bind(this);
 
     this.boardElement.addEventListener("mouseover", this.#handleMouseEnter);
     this.boardElement.addEventListener("mouseout", this.#handleMouseLeave);
+    this.boardElement.addEventListener("keydown", this.#boundKeyDownHandler);
   }
 
   renderBoard(boardState) {
@@ -78,6 +83,7 @@ class GameView {
           this.boardElement.appendChild(this.#createCell(row, col));
         }
       }
+      this.#activeCellCoordinates = { row: 0, col: 0 };
     }
 
     const cells = Array.from(this.boardElement.children);
@@ -106,6 +112,7 @@ class GameView {
 
         cell.classList.remove(this.hoverClass);
         cell.classList.toggle(this.filledClass, Boolean(value));
+        cell.setAttribute("tabindex", "-1");
 
         for (const className of Object.values(this.playerClasses)) {
           cell.classList.remove(className);
@@ -116,6 +123,7 @@ class GameView {
         }
       }
     }
+    this.#syncTabIndexes();
   }
 
   updateCurrentPlayer(player) {
@@ -214,6 +222,8 @@ class GameView {
             event,
           });
         }
+
+        this.#setActiveCell(row, col);
       };
 
       this.boardElement.addEventListener("click", this.#boundClickHandler);
@@ -230,7 +240,7 @@ class GameView {
     cell.textContent = "";
     cell.setAttribute("role", "gridcell");
     cell.setAttribute("aria-label", `Cell ${row + 1}, ${col + 1}, empty`);
-    cell.setAttribute("tabindex", "0");
+    cell.setAttribute("tabindex", "-1");
     return cell;
   }
 
@@ -270,6 +280,143 @@ class GameView {
     cell.classList.remove(this.hoverClass);
   }
 
+  #handleKeyDown(event) {
+    const cell = this.#findCell(event.target);
+    if (!cell) return;
+
+    const size = this.#getBoardSize();
+    if (!size) return;
+
+    const row = Number.parseInt(cell.dataset.row, 10);
+    const col = Number.parseInt(cell.dataset.col, 10);
+    if (Number.isNaN(row) || Number.isNaN(col)) return;
+
+    let nextRow = row;
+    let nextCol = col;
+    let handled = false;
+
+    switch (event.key) {
+      case "ArrowUp":
+        if (row > 0) {
+          nextRow = row - 1;
+          handled = true;
+        }
+        break;
+      case "ArrowDown":
+        if (row < size - 1) {
+          nextRow = row + 1;
+          handled = true;
+        }
+        break;
+      case "ArrowLeft":
+        if (col > 0) {
+          nextCol = col - 1;
+          handled = true;
+        }
+        break;
+      case "ArrowRight":
+        if (col < size - 1) {
+          nextCol = col + 1;
+          handled = true;
+        }
+        break;
+      case "Home":
+        nextCol = 0;
+        handled = true;
+        break;
+      case "End":
+        nextCol = size - 1;
+        handled = true;
+        break;
+      case "PageUp":
+        nextRow = 0;
+        handled = true;
+        break;
+      case "PageDown":
+        nextRow = size - 1;
+        handled = true;
+        break;
+      case "Enter":
+      case " ":
+      case "Spacebar":
+        event.preventDefault();
+        cell.click();
+        return;
+      default:
+        break;
+    }
+
+    if (!handled) return;
+
+    event.preventDefault();
+    this.#setActiveCell(nextRow, nextCol, { focus: true });
+  }
+
+  #setActiveCell(row, col, options = {}) {
+    const size = this.#getBoardSize();
+    if (!size) return;
+
+    const clampedRow = Math.max(0, Math.min(size - 1, row));
+    const clampedCol = Math.max(0, Math.min(size - 1, col));
+
+    this.#activeCellCoordinates = { row: clampedRow, col: clampedCol };
+    const targetCell = this.#findCellByCoordinates(clampedRow, clampedCol);
+
+    this.#syncTabIndexes();
+
+    if (options.focus && targetCell) {
+      targetCell.focus();
+    }
+  }
+
+  #syncTabIndexes() {
+    const size = this.#getBoardSize();
+    if (!size) return;
+
+    const cells = Array.from(this.boardElement.children);
+    if (!cells.length) return;
+
+    for (const cell of cells) {
+      cell.setAttribute("tabindex", "-1");
+    }
+
+    const { row, col } = this.#activeCellCoordinates || { row: 0, col: 0 };
+    const target =
+      this.#findCellByCoordinates(row, col) || this.#findCellByCoordinates(0, 0);
+
+    if (target) {
+      target.setAttribute("tabindex", "0");
+      const targetRow = Number.parseInt(target.dataset.row, 10);
+      const targetCol = Number.parseInt(target.dataset.col, 10);
+      this.#activeCellCoordinates = {
+        row: Number.isNaN(targetRow) ? 0 : targetRow,
+        col: Number.isNaN(targetCol) ? 0 : targetCol,
+      };
+    }
+  }
+
+  #getBoardSize() {
+    const fromAttribute = Number.parseInt(
+      this.boardElement.getAttribute("data-size"),
+      10
+    );
+    if (!Number.isNaN(fromAttribute) && fromAttribute > 0) {
+      return fromAttribute;
+    }
+
+    const cellCount = this.boardElement.children.length;
+    const size = Math.sqrt(cellCount);
+    return Number.isInteger(size) ? size : null;
+  }
+
+  #findCellByCoordinates(row, col) {
+    const size = this.#getBoardSize();
+    if (!size) return null;
+
+    const index = row * size + col;
+    return this.boardElement.children[index] || null;
+  }
+
   static #queryFirst(selector) {
     if (!selector || typeof selector !== "string") {
       return null;
@@ -285,4 +432,10 @@ class GameView {
   }
 }
 
-module.exports = GameView;
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = GameView;
+}
+
+if (typeof window !== "undefined") {
+  window.GameView = GameView;
+}

@@ -1,31 +1,82 @@
 (() => {
-  const pad = (value) => String(value).padStart(2, "0");
-
-  const updateClock = (secondsElapsed) => {
-    const minutes = Math.floor(secondsElapsed / 60);
-    const seconds = secondsElapsed % 60;
-    return `${pad(minutes)}:${pad(seconds)}`;
+  const formatTime = (seconds) => {
+    const total = Math.max(0, seconds | 0);
+    const mins = Math.floor(total / 60)
+      .toString()
+      .padStart(2, "0");
+    const secs = (total % 60).toString().padStart(2, "0");
+    return `${mins}:${secs}`;
   };
 
-  const initialize = () => {
-    const board = document.querySelector(".board");
-    const scoreEl = document.getElementById("score");
-    const timerEl = document.getElementById("timer");
-    const newGameBtn = document.getElementById("new-game");
-    const resetBtn = document.getElementById("reset-board");
+  const initializeFooterYear = () => {
     const footerYear = document.getElementById("copyright-year");
+    if (!footerYear) return;
+    footerYear.textContent = String(new Date().getFullYear());
+  };
 
-    if (footerYear) {
-      const now = new Date();
-      footerYear.textContent = String(now.getFullYear());
+  const initializeGame = () => {
+    const GameModel = window.GameModel;
+    const GameView = window.GameView;
+    const GameController = window.GameController;
+
+    if (!GameModel || !GameView || !GameController) {
+      throw new Error("Game components are not available in the window scope");
     }
+
+    const boardElement = document.querySelector("[data-role='board']");
+    const currentPlayerElement = document.querySelector("[data-role='current-player']");
+    const resultElement = document.querySelector("[data-role='game-result']");
+    const errorElement = document.querySelector("[data-role='game-error']");
+    const newGameButton = document.querySelector("[data-action='new-game']");
+    const resetButton = document.querySelector("[data-action='reset-board']");
+    const scoreElement = document.getElementById("score");
+    const timerElement = document.getElementById("timer");
+
+    if (!boardElement) {
+      throw new Error("Unable to locate the game board in the DOM");
+    }
+
+    if (newGameButton) {
+      newGameButton.setAttribute("aria-controls", boardElement.id || "game-board");
+    }
+    if (resetButton) {
+      resetButton.setAttribute("aria-controls", boardElement.id || "game-board");
+    }
+
+    const model = new GameModel();
+    const view = new GameView({
+      boardElement,
+      currentPlayerElement,
+      resultElement,
+      errorElement,
+      newGameButton,
+    });
+    const controller = new GameController({ model, view });
 
     let secondsElapsed = 0;
     let timerId = null;
+    let roundActive = false;
 
-    const setScore = (value) => {
-      if (scoreEl) {
-        scoreEl.textContent = String(value);
+    const scoreState = {
+      X: 0,
+      O: 0,
+      draws: 0,
+    };
+
+    const updateScoreDisplay = () => {
+      if (!scoreElement) return;
+      scoreElement.textContent = `X: ${scoreState.X} | O: ${scoreState.O} | Draws: ${scoreState.draws}`;
+    };
+
+    const updateTimerDisplay = () => {
+      if (!timerElement) return;
+      timerElement.textContent = formatTime(secondsElapsed);
+    };
+
+    const stopTimer = () => {
+      if (timerId !== null) {
+        window.clearInterval(timerId);
+        timerId = null;
       }
     };
 
@@ -33,49 +84,70 @@
       if (timerId !== null) return;
       timerId = window.setInterval(() => {
         secondsElapsed += 1;
-        if (timerEl) {
-          timerEl.textContent = updateClock(secondsElapsed);
-        }
+        updateTimerDisplay();
       }, 1000);
     };
 
-    const resetGame = () => {
-      if (timerId !== null) {
-        window.clearInterval(timerId);
-        timerId = null;
-      }
+    const resetTimer = () => {
+      stopTimer();
       secondsElapsed = 0;
-      if (timerEl) {
-        timerEl.textContent = updateClock(0);
-      }
-      setScore(0);
-      board?.querySelectorAll(".cell").forEach((cell) => {
-        cell.textContent = "";
-        cell.classList.remove("active");
-      });
+      updateTimerDisplay();
     };
 
-    board?.addEventListener("click", (event) => {
-      const target = event.target;
-      if (!(target instanceof HTMLElement)) return;
-      if (!target.classList.contains("cell")) return;
+    const baseHandleCellClick = controller.handleCellClick;
+    controller.handleCellClick = (details = {}) => {
+      const response = baseHandleCellClick(details);
 
-      startTimer();
-      target.classList.toggle("active");
-      target.textContent = target.classList.contains("active") ? "★" : "";
+      if (response && response.success) {
+        if (!roundActive) {
+          roundActive = true;
+          startTimer();
+        }
 
-      const activeCells = board.querySelectorAll(".cell.active").length;
-      setScore(activeCells);
-    });
+        const result = response.result;
+        if (result && result.status && result.status !== "playing") {
+          roundActive = false;
+          stopTimer();
 
-    newGameBtn?.addEventListener("click", () => {
-      resetGame();
-      // Placeholder for any future shuffle/initialization logic.
-    });
+          if (result.status === "won" && result.winner && scoreState[result.winner] !== undefined) {
+            scoreState[result.winner] += 1;
+            updateScoreDisplay();
+          } else if (result.status === "draw") {
+            scoreState.draws += 1;
+            updateScoreDisplay();
+          }
+        }
+      }
 
-    resetBtn?.addEventListener("click", resetGame);
-    resetGame();
+      return response;
+    };
+
+    const baseHandleNewGame = controller.handleNewGame;
+    controller.handleNewGame = (...args) => {
+      const response = baseHandleNewGame(...args);
+      roundActive = false;
+      resetTimer();
+      return response;
+    };
+
+    if (resetButton) {
+      resetButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        scoreState.X = 0;
+        scoreState.O = 0;
+        scoreState.draws = 0;
+        updateScoreDisplay();
+        controller.handleNewGame();
+      });
+    }
+
+    controller.initGame();
+    updateScoreDisplay();
+    resetTimer();
   };
 
-  window.addEventListener("DOMContentLoaded", initialize);
+  window.addEventListener("DOMContentLoaded", () => {
+    initializeFooterYear();
+    initializeGame();
+  });
 })();

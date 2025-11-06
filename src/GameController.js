@@ -1,5 +1,24 @@
-const GameModel = require("./GameModel");
-const GameView = require("./GameView");
+let DefaultGameModel;
+let DefaultGameView;
+
+if (typeof require === "function") {
+  try {
+    DefaultGameModel = require("./GameModel");
+  } catch (error) {
+    DefaultGameModel = null;
+  }
+
+  try {
+    DefaultGameView = require("./GameView");
+  } catch (error) {
+    DefaultGameView = null;
+  }
+}
+
+if (typeof window !== "undefined") {
+  DefaultGameModel = window.GameModel || DefaultGameModel;
+  DefaultGameView = window.GameView || DefaultGameView;
+}
 
 class GameController {
   #newGameListener;
@@ -158,7 +177,10 @@ class GameController {
       }
       return instance;
     }
-    return new GameModel(boardSize);
+    if (!DefaultGameModel) {
+      throw new Error("No GameModel implementation available");
+    }
+    return new DefaultGameModel(boardSize);
   }
 
   #createView({ view, viewFactory, viewOptions }) {
@@ -175,7 +197,10 @@ class GameController {
         "Cannot create GameView when no DOM is available. Provide a view instance instead."
       );
     }
-    return new GameView(viewOptions);
+    if (!DefaultGameView) {
+      throw new Error("No GameView implementation available");
+    }
+    return new DefaultGameView(viewOptions);
   }
 
   #validateCoordinates(row, col) {
@@ -204,4 +229,10 @@ class GameController {
   }
 }
 
-module.exports = GameController;
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = GameController;
+}
+
+if (typeof window !== "undefined") {
+  window.GameController = GameController;
+}
