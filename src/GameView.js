@@ -1,4 +1,7 @@
 class GameView {
+  #cellClickCallback;
+  #boundClickHandler;
+
   constructor(options = {}) {
     if (typeof document === "undefined" || !document) {
       throw new Error("GameView requires a DOM environment");
