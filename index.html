@@ -16,7 +16,41 @@
 
   <main class="wrapper">
     <section class="game-panel">
-      <div class="scoreboard">
+      <div class="board-card">
+        <div
+          class="board"
+          data-role="board"
+          role="grid"
+          aria-label="Game board"
+        >
+          <div class="cell" role="gridcell" data-cell="0"></div>
+          <div class="cell" role="gridcell" data-cell="1"></div>
+          <div class="cell" role="gridcell" data-cell="2"></div>
+          <div class="cell" role="gridcell" data-cell="3"></div>
+          <div class="cell" role="gridcell" data-cell="4"></div>
+          <div class="cell" role="gridcell" data-cell="5"></div>
+          <div class="cell" role="gridcell" data-cell="6"></div>
+          <div class="cell" role="gridcell" data-cell="7"></div>
+          <div class="cell" role="gridcell" data-cell="8"></div>
+        </div>
+
+        <div class="game-status">
+          <p
+            class="message message--result"
+            data-role="game-result"
+            aria-live="polite"
+            aria-hidden="true"
+          ></p>
+          <p
+            class="message message--error"
+            data-role="game-error"
+            aria-live="assertive"
+            aria-hidden="true"
+          ></p>
+        </div>
+      </div>
+
+      <aside class="scoreboard" aria-label="Game information">
         <div class="stat">
           <span class="label">Score</span>
           <span class="value" id="score">0</span>
@@ -25,24 +59,29 @@
           <span class="label">Timer</span>
           <span class="value" id="timer">00:00</span>
         </div>
-      </div>
-
-      <div class="board" role="grid" aria-label="Game board">
-        <div class="cell" role="gridcell" data-cell="0"></div>
-        <div class="cell" role="gridcell" data-cell="1"></div>
-        <div class="cell" role="gridcell" data-cell="2"></div>
-        <div class="cell" role="gridcell" data-cell="3"></div>
-        <div class="cell" role="gridcell" data-cell="4"></div>
-        <div class="cell" role="gridcell" data-cell="5"></div>
-        <div class="cell" role="gridcell" data-cell="6"></div>
-        <div class="cell" role="gridcell" data-cell="7"></div>
-        <div class="cell" role="gridcell" data-cell="8"></div>
-      </div>
+        <div class="stat stat--current">
+          <span class="label">Current Player</span>
+          <span
+            class="value value--current"
+            id="current-player"
+            data-role="current-player"
+          >&mdash;</span>
+        </div>
+      </aside>
     </section>
 
     <section class="controls">
-      <button type="button" id="new-game">New Game</button>
-      <button type="button" id="reset-board">Reset Board</button>
+      <button type="button" id="new-game" data-action="new-game">
+        New Game
+      </button>
+      <button
+        type="button"
+        id="reset-board"
+        class="button-secondary"
+        data-action="reset-board"
+      >
+        Reset Board
+      </button>
     </section>
   </main>
 
